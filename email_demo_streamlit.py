@@ -25,10 +25,16 @@ col1, col2 = st.columns([1, 1.2])
 
 with col1:
     st.subheader("📥 活动简报输入 (Ingestion)")
+    preset_options = {
+        "自定义输入": "",
+        "🔥 腾讯游戏：赛博春季回归活动": "项目：腾讯自研新游《星际战魂》赛博春季赛回归活动。\n目标人群：30天未登录的高价值流失玩家。\n核心奖励：限定传说级皮肤‘极光之刃’限时 8 折，登录即领‘暖春礼包’。\n视觉风格：赛博朋克深色主题，霓虹紫与亮金配色。",
+        "🎁 腾讯游戏：新赛季预热活动": "项目：王者荣耀新赛季。目标：吸引活跃玩家参与预注册。奖励：抢先体验卡。风格：竞技感、明亮蓝白配色。"
+    }
+    selected_preset = st.selectbox("💡 快速加载预设模板：", list(preset_options.keys()))
     campaign_brief = st.text_area(
-        "请描述游戏活动内容、目标人群及奖励：",
-        placeholder="例如：针对 30 天未登录玩家发放‘暖春回归礼包’...",
-        height=300
+        "请描述游戏活动内容：",
+        value=preset_options[selected_preset],
+        height=250
     )
     generate_btn = st.button("🚀 开始 AI 自动化生成", use_container_width=True)
 
@@ -89,3 +95,4 @@ with col2:
             except Exception as e:
 
                 st.error(f"生成失败：{str(e)}")
+

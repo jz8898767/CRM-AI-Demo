@@ -60,7 +60,7 @@ def retrieve_top_chunks_embedding(chunks, query, api_key, top_k=3):
     return [chunks[i] for i in top_indices]
 
 # 3. Streamlit 页面配置
-st.set_page_config(page_title="腾讯游戏 CRM 智能生成系统", layout="wide")
+st.set_page_config(page_title="游戏 CRM 智能生成系统", layout="wide")
 # 移动端提示
 st.markdown("""
 <style>
@@ -81,7 +81,7 @@ st.markdown("""
 📱 移动端用户请点击左上角「☰」，打开侧边栏上传 RAG 知识库
 </div>
 """, unsafe_allow_html=True)
-st.title("🎮 腾讯游戏 CRM 智能邮件生成系统 (RAG版)")
+st.title("🎮 游戏 CRM 智能邮件生成系统 (RAG版)")
 st.markdown("---")
 
 # 4. 侧边栏：API Key + 知识库上传
@@ -205,7 +205,7 @@ with col2:
                         st.code(retrieved_context)
 
                         prompt = f"""
-                            你是一名资深腾讯游戏 CRM 邮件运营专家。
+                            你是一名资深游戏 CRM 邮件运营专家。
 
                             请根据【活动简报】并严格参考【检索知识库片段】，生成生产级 HTML 邮件。
 
@@ -219,7 +219,7 @@ with col2:
                             - 仅输出 HTML，不要解释
                             - 包含：标题、副标题、正文、CTA按钮、页脚
                             - 使用简洁内联 CSS
-                            - CTA 按钮必须是 <a> 标签
+                            - CTA 按钮必须是 <a href="https://jz8898767.github.io/egg_page/">
                             - 邮件术语必须与知识库一致
                             - 风格要符合游戏调性
                             """
@@ -229,7 +229,7 @@ with col2:
                         st.warning("⚠️ 未上传知识库，使用普通 AI 生成模式（试用）")
 
                         prompt = f"""
-                            你是一名资深腾讯游戏 CRM 邮件运营专家。
+                            你是一名资深游戏 CRM 邮件运营专家。
 
                             请根据【活动简报】直接生成一封高质量 HTML 游戏营销邮件。
 
@@ -240,7 +240,7 @@ with col2:
                             - 仅输出 HTML，不要解释
                             - 包含：标题、副标题、正文、CTA按钮、页脚
                             - 使用简洁内联 CSS
-                            - CTA 按钮必须是 <a> 标签
+                            - CTA 按钮必须是 <a href="https://jz8898767.github.io/egg_page/"> 
                             - 风格要符合游戏调性
                             """
 

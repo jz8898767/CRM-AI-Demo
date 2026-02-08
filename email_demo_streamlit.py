@@ -61,6 +61,26 @@ def retrieve_top_chunks_embedding(chunks, query, api_key, top_k=3):
 
 # 3. Streamlit 页面配置
 st.set_page_config(page_title="腾讯游戏 CRM 智能生成系统", layout="wide")
+# 移动端提示
+st.markdown("""
+<style>
+.mobile-upload-tip {
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    margin: 8px 0;
+    display: none;
+}
+@media (max-width: 768px) {
+    .mobile-upload-tip {
+        display: block;
+    }
+}
+</style>
+<div class="mobile-upload-tip">
+📱 移动端用户请点击左上角「☰」，打开侧边栏上传 RAG 知识库
+</div>
+""", unsafe_allow_html=True)
 st.title("🎮 腾讯游戏 CRM 智能邮件生成系统 (RAG版)")
 st.markdown("---")
 
@@ -106,26 +126,6 @@ with st.sidebar:
 
         st.info(f"知识库长度：{len(kb_content)} 字符")
 
-# 移动端提示
-st.markdown("""
-<style>
-.mobile-upload-tip {
-    text-align: center;
-    font-size: 13px;
-    color: #666;
-    margin: 8px 0;
-    display: none;
-}
-@media (max-width: 768px) {
-    .mobile-upload-tip {
-        display: block;
-    }
-}
-</style>
-<div class="mobile-upload-tip">
-📱 移动端用户请点击左上角「☰」，打开侧边栏上传 RAG 知识库
-</div>
-""", unsafe_allow_html=True)
 
 # 5. 主界面：输入 + 输出布局
 col1, col2 = st.columns([1, 1.2])

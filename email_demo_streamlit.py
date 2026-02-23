@@ -5,36 +5,25 @@ import requests
 import numpy as np
 import re
 from numpy.linalg import norm
-
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-
-# 1. 文本切块 Chunking
-def chunk_text(text, chunk_size=300):
-    """
-    将知识库文本切成多个 chunk，避免一次性塞进 prompt
-    """
+def chunk_text(text, chunk_size=300):#切块
     chunks = []
     for i in range(0, len(text), chunk_size):
         chunk = text[i:i + chunk_size]
         chunks.append(chunk)
     return chunks
 
-# 2. RAG 检索 Retrieval（TF-IDF）
-def retrieve_top_chunks_tfidf(chunks, query, top_k=3):
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-
-    vectorizer = TfidfVectorizer()
-    chunk_vectors = vectorizer.fit_transform(chunks)
-    query_vector = vectorizer.transform([query])
-    similarities = cosine_similarity(query_vector, chunk_vectors)[0]
-    top_indices = similarities.argsort()[-top_k:][::-1]
+def retrieve_top_chunks_tfidf(chunks, query, top_k=3):# TF-IDF 向量化和余弦相似度进行检索
+    vectorizer = TfidfVectorizer()# 初始化 TF-IDF 向量器
+    chunk_vectors = vectorizer.fit_transform(chunks)# 将文本块转换为 TF-IDF 向量
+    query_vector = vectorizer.transform([query])# 将查询转换为 TF-IDF 向量
+    similarities = cosine_similarity(query_vector, chunk_vectors)[0]# 计算查询与每个文本块的余弦相似度
+    top_indices = similarities.argsort()[-top_k:][::-1]# 获取相似度最高的 top_k 个文本块的索引
     return [chunks[i] for i in top_indices]
 
-# RAG 检索 Retrieval（embedding）
-def get_qwen_embedding(text, api_key):
+def get_qwen_embedding(text, api_key):# 调用 Qwen Embedding API 
     url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -45,7 +34,7 @@ def get_qwen_embedding(text, api_key):
         "model": "text-embedding-v2"
     }
     response = requests.post(url, json=data, headers=headers)
-    if response.status_code != 200:
+    if response.status_code != 200:# 错误处理
         raise Exception(f"Qwen Embedding API error: {response.status_code} - {response.text}")
     result = response.json()
     return np.array(result['output']['embeddings'][0]['embedding'])
@@ -53,16 +42,15 @@ def get_qwen_embedding(text, api_key):
 def cosine_sim(a, b):
     return np.dot(a, b) / (norm(a) * norm(b))
 
-def retrieve_top_chunks_embedding(chunks, query, api_key, top_k=3):
-    query_vec = get_qwen_embedding(query, api_key)
-    chunk_vectors = [get_qwen_embedding(chunk, api_key) for chunk in chunks]
+def retrieve_top_chunks_embedding(chunks, query, api_key, top_k=3):# Qwen Embedding API 向量化和余弦相似度进行检索
+    query_vec = get_qwen_embedding(query, api_key)# 获取查询的向量表示
+    chunk_vectors = [get_qwen_embedding(chunk, api_key) for chunk in chunks]# 获取每个文本块的向量表示
     similarities = [cosine_sim(query_vec, cv) for cv in chunk_vectors]
     top_indices = np.argsort(similarities)[-top_k:][::-1]
     return [chunks[i] for i in top_indices]
 
-# 3. Streamlit 页面配置
-st.set_page_config(page_title="游戏 CRM 智能生成系统", layout="wide")
-# 移动端提示
+# Streamlit 页面配置
+st.set_page_config(page_title="游戏CRM邮件生成系统", layout="wide")
 st.markdown("""
 <style>
 .mobile-upload-tip {
@@ -82,10 +70,9 @@ st.markdown("""
 📱 移动端用户请点击左上角「☰」，打开侧边栏 选择目标用户 & 上传 RAG 知识库
 </div>
 """, unsafe_allow_html=True)
-st.title("🎮 游戏 CRM 智能邮件生成系统 (Demo)")
+st.title("游戏CRM邮件生成系统(Demo)")
 st.markdown("---")
 
-# 4. 侧边栏：API Key + 知识库上传
 with st.sidebar:
     st.header("⚙️ 系统配置")
 
@@ -105,25 +92,19 @@ with st.sidebar:
             dashscope_api_key = st.secrets["dashscope_api_key"]
             st.success("✅ 已加载 DashScope (Qwen) API 密钥")
         else:
-            dashscope_api_key = st.text_input(
-                "DashScope API Key（可选，用于语义检索；留空则使用关键词匹配）",
-                type="password"
-            )
+            dashscope_api_key = st.text_input("DashScope API Key（可选，用于语义检索；留空则使用关键词匹配）", type="password")
     except:
-        dashscope_api_key = st.text_input(
-            "DashScope API Key（可选，用于语义检索；留空则使用关键词匹配）",
-            type="password"
-        )
+        dashscope_api_key = st.text_input("DashScope API Key（可选，用于语义检索；留空则使用关键词匹配）", type="password")
 
     st.markdown("---")
-    st.header("👥 目标用户分层 (Personalization)")
+    st.header("👥 目标用户分层（仅展示，尚未完善该功能）")
     user_segment = st.selectbox(
         "选择目标客群",
         ["流失老玩家 (30天未登, 高付费潜力)", "活跃新玩家 (7天新进, 低付费)", "大R核心玩家 (持续活跃, 高客单)"]
     )
 
     st.markdown("---")
-    st.header("📚 上传游戏知识库 (RAG)")
+    st.header("上传知识库 (RAG)")
 
     uploaded_file = st.file_uploader("上传游戏 Wiki 或版本指南 (.txt)", type=("txt"))
 
@@ -135,12 +116,9 @@ with st.sidebar:
         st.info(f"知识库长度：{len(kb_content)} 字符")
 
 
-# 5. 主界面：输入 + 输出布局
 col1, col2 = st.columns([1, 1.2])
-
 with col1:
-    st.subheader("📥 活动简报输入")
-
+    st.subheader("活动简报输入")
     preset_options = {
         "自定义输入": "",
         "《王者荣耀》S34 赛季“云梦有灵”回归活动": (
@@ -150,7 +128,7 @@ with col1:
             "2. 限时挑战：完成 3 局排位，必得“史诗皮肤自选宝箱”。\n"
             "A/B 测试策略要求：\n"
             "- 方案 A（紧迫感）：强调“S34 赛季限定”和“回归福利倒计时”。\n"
-            "- 方案 B（情感/荣耀）：强调“昔日战友在等你”、“峡谷需要你”的情感连接，唤起玩家的归属感。\n"
+            "- 方案 B（情感）：强调“昔日战友在等你”、“峡谷需要你”的情感连接，唤起玩家的归属感。\n"
             "风格要求：神秘、梦幻，深蓝与金色为主色调。"
         ),
         "科幻 FPS 新游《星际战魂》封闭内测预约": (
@@ -167,20 +145,20 @@ with col1:
     }
 
     selected_preset = st.selectbox(
-        "💡 快速加载模板：",
+        "快速加载模板：",
         list(preset_options.keys())
     )
 
     campaign_brief = st.text_area(
-        "请在此描述活动内容：",
+        "请在此描述活动内容、目标用户与A/B 测试要求：",
         value=preset_options[selected_preset],
         height=250
     )
 
-    generate_btn = st.button("🚀 开始 AI 自动生成", use_container_width=True)
+    generate_btn = st.button("开始 AI 自动生成", use_container_width=True)
 
 with col2:
-    st.subheader("📤 A/B 测试生成与质量评估")
+    st.subheader("A/B 测试生成与质量评估")
 
     if generate_btn:
         if not api_key:
@@ -192,7 +170,7 @@ with col2:
                     base_url="https://api.deepseek.com"
                 )
 
-                with st.spinner("🤖 AI 正在生成 A/B 两版方案并进行合规质检..."):
+                with st.spinner("AI 正在生成 A/B 两版方案并进行合规质检..."):
                     
                     format_instruction = """
                     请严格按照以下标记格式输出内容：
@@ -222,13 +200,11 @@ with col2:
                     ===END_REASON===
                     """
 
-                    if kb_content:
-                        # 模式 A：RAG 增强模式
-                        st.success("📚 启用 RAG 检索增强模式")
+                    if kb_content:# 如果上传了知识库，启用 RAG 增强模式；否则使用普通生成模式
+                        st.success("启用 RAG 检索增强模式")
                         try:
                             chunks = chunk_text(kb_content)
-                            # 尝试 Embedding 检索，失败回退到 TF-IDF
-                            try:
+                            try:# 尝试 Embedding 检索，失败回退到 TF-IDF
                                 if dashscope_api_key:
                                     top_chunks = retrieve_top_chunks_embedding(chunks, campaign_brief, dashscope_api_key, top_k=3)
                                 else:
@@ -237,9 +213,8 @@ with col2:
                                 top_chunks = retrieve_top_chunks_tfidf(chunks, campaign_brief, top_k=3)
                             
                             retrieved_context = "\n".join(top_chunks)
-                            with st.expander("🔍 查看检索到的知识片段"):
+                            with st.expander("查看检索到的知识片段"):
                                 st.code(retrieved_context)
-
                         except Exception as e:
                             st.warning(f"检索异常，已降级处理：{e}")
                             retrieved_context = "检索失败"
@@ -253,17 +228,17 @@ with col2:
                         要求：
                         - 邮件术语必须与参考资料一致
                         - 风格符合游戏调性
+                        - 页脚涉及到运营团队的称谓必须与游戏名称一致
                         - 包含：标题、副标题、正文、CTA按钮、页脚
-                        - 页脚的涉及到运营团队的称谓必须与游戏名称一致
                         - 使用简洁内联 CSS
                         - CTA 按钮必须是 <a href="https://jz8898767.github.io/egg_page/">
+                        - 【目标用户】与【活动简报】中的目标用户冲突时，以【活动简报】为准
 
                         {format_instruction}
                         """
 
-                    else:
-                        # 模式 B：普通生成模式 (无知识库)
-                        st.info("⚠️ 未上传知识库，使用通用模型生成")
+                    else:# 普通生成模式 (无知识库)
+                        st.info("未上传知识库，使用通用模型生成")
 
                         system_prompt = f"""
                         你是一个游戏 CRM 专家。请根据活动简报生成 A/B 测试邮件。
@@ -273,10 +248,11 @@ with col2:
                         要求：
                         - 邮件术语必须与参考资料一致
                         - 风格符合游戏调性
+                        - 页脚涉及到运营团队的称谓必须与游戏名称一致
                         - 包含：标题、副标题、正文、CTA按钮、页脚
-                        - 页脚的涉及到运营团队的称谓必须与游戏名称一致
                         - 使用简洁内联 CSS
                         - CTA 按钮必须是 <a href="https://jz8898767.github.io/egg_page/">
+                        - 【目标用户】与【活动简报】中的目标用户冲突时，以【活动简报】为准
 
                         {format_instruction}
                         """
@@ -293,9 +269,9 @@ with col2:
                     raw_content = response.choices[0].message.content
 
                     # 统一解析
-                    def safe_extract(text, start_tag, end_tag, default_val):
-                        pattern = f"{start_tag}(.*?){end_tag}"
-                        match = re.search(pattern, text, re.DOTALL)
+                    def safe_extract(text, start_tag, end_tag, default_val):# 使用正则表达式提取内容，避免标签缺失导致的错误
+                        pattern = f"{start_tag}(.*?){end_tag}"# re.DOTALL 让 . 匹配换行符，确保能提取多行内容
+                        match = re.search(pattern, text, re.DOTALL)# 如果匹配成功，返回提取的内容；否则返回默认值
                         if match:
                             return match.group(1).strip()
                         return default_val
@@ -310,12 +286,12 @@ with col2:
                     reason = safe_extract(raw_content, "===REASON===", "===END_REASON===", "AI 未能生成评价")
 
                     #  UI 展示
-                    st.info(f"🛡️ **AI 质量合规评分：{score}/100**")
-                    st.caption(f"📝 评审意见：{reason}")
+                    st.info(f"**AI 质量合规评分（仅展示，尚未完善该功能）：{score}/100**")
+                    st.caption(f"评审意见（仅展示，尚未完善该功能）：{reason}")
                     
                     st.divider()
 
-                    tab_a, tab_b = st.tabs(["🅰️ 方案 A", "🅱️ 方案 B"])
+                    tab_a, tab_b = st.tabs(["方案 A", "方案 B"])
                     
                     with tab_a:
                         st.write(f"**策略思路**：{strat_a}")
@@ -333,5 +309,3 @@ with col2:
 
             except Exception as e:
                 st.error(f"运行出错：{str(e)}")
-
-

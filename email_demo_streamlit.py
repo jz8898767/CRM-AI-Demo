@@ -4,6 +4,8 @@ import streamlit.components.v1 as components
 import requests
 import numpy as np
 import re
+from google import genai
+from google.genai import types
 from numpy.linalg import norm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -23,28 +25,25 @@ def retrieve_top_chunks_tfidf(chunks, query, top_k=3):# TF-IDF 向量化和余�
     top_indices = similarities.argsort()[-top_k:][::-1]# 获取相似度最高的 top_k 个文本块的索引
     return [chunks[i] for i in top_indices]
 
-def get_qwen_embedding(text, api_key):# 调用 Qwen Embedding API 
-    url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "input": text,
-        "model": "text-embedding-v2"
-    }
-    response = requests.post(url, json=data, headers=headers)
-    if response.status_code != 200:# 错误处理
-        raise Exception(f"Qwen Embedding API error: {response.status_code} - {response.text}")
-    result = response.json()
-    return np.array(result['output']['embeddings'][0]['embedding'])
+def get_google_embedding(text, api_key):# 调用Embedding API 
+    genai.configure(api_key=api_key)
+    model = 'models/text-embedding-004'
+    try:
+        result = genai.embed_content(
+            model=model,
+            content=text,
+            task_type="retrieval_document" 
+        )
+        return np.array(result['embedding'])        
+    except Exception as e:
+        raise Exception(f"Google Embedding API error: {str(e)}")
 
 def cosine_sim(a, b):
     return np.dot(a, b) / (norm(a) * norm(b))
 
-def retrieve_top_chunks_embedding(chunks, query, api_key, top_k=3):# Qwen Embedding API 向量化和余弦相似度进行检索
-    query_vec = get_qwen_embedding(query, api_key)# 获取查询的向量表示
-    chunk_vectors = [get_qwen_embedding(chunk, api_key) for chunk in chunks]# 获取每个文本块的向量表示
+def retrieve_top_chunks_embedding(chunks, query, api_key, top_k=3):# google Embedding API 向量化和余弦相似度进行检索
+    query_vec = get_google_embedding(query, api_key)# 获取查询的向量表示
+    chunk_vectors = [get_google_embedding(chunk, api_key) for chunk in chunks]# 获取每个文本块的向量表示
     similarities = [cosine_sim(query_vec, cv) for cv in chunk_vectors]
     top_indices = np.argsort(similarities)[-top_k:][::-1]
     return [chunks[i] for i in top_indices]
@@ -86,15 +85,15 @@ with st.sidebar:
     except:
         api_key = st.text_input("请输入 DeepSeek API Key", type="password")
     
-    dashscope_api_key = ""
+    google_api_key = ""
     try:
-        if "dashscope_api_key" in st.secrets:
-            dashscope_api_key = st.secrets["dashscope_api_key"]
-            st.success("✅ 已加载 DashScope (Qwen) API 密钥")
+        if "google_api_key" in st.secrets:
+            google_api_key = st.secrets["google_api_key"]
+            st.success("✅ 已加载 google API 密钥")
         else:
-            dashscope_api_key = st.text_input("DashScope API Key（可选，用于语义检索；留空则使用关键词匹配）", type="password")
+            google_api_key = st.text_input("google API Key（可选，用于语义检索；留空则使用关键词匹配）", type="password")
     except:
-        dashscope_api_key = st.text_input("DashScope API Key（可选，用于语义检索；留空则使用关键词匹配）", type="password")
+        google_api_key = st.text_input("google API Key（可选，用于语义检索；留空则使用关键词匹配）", type="password")
 
     st.markdown("---")
     st.header("👥 目标用户分层（仅展示，尚未完善该功能）")
@@ -205,8 +204,9 @@ with col2:
                         try:
                             chunks = chunk_text(kb_content)
                             try:# 尝试 Embedding 检索，失败回退到 TF-IDF
-                                if dashscope_api_key:
-                                    top_chunks = retrieve_top_chunks_embedding(chunks, campaign_brief, dashscope_api_key, top_k=3)
+                                if google_api_key:
+                                    st.success("Embedding 检索")
+                                    top_chunks = retrieve_top_chunks_embedding(chunks, campaign_brief, google_api_key, top_k=3)
                                 else:
                                     top_chunks = retrieve_top_chunks_tfidf(chunks, campaign_brief, top_k=3)
                             except:
